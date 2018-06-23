@@ -10,6 +10,9 @@ from django_redis import get_redis_connection
 
 from meiduo.apps.verifications.serializers import SmsCodeSerializer
 from . import constants,serializers
+from celery_tasks.sms.tasks import send_sms_code
+
+
 # Create your views here.
 from meiduo.libs.captcha.captcha import captcha
 from meiduo.libs.yuntongxun.sms import CCP
@@ -33,13 +36,15 @@ class SmsCode(GenericAPIView):
     短信验证码
     """
     serializer_class = serializers.SmsCodeSerializer
+
     def get(self,request,mobile):
-        serial = SmsCodeSerializer(data=request.query_params,context={'mobile': mobile})
+        # 使用get_serializer方法给序列化器对象补充view属性,可以拿到词self的属性
+        serial = self.get_serializer(data=request.query_params)
         # 1. 使用序列化器校验
         try:
             serial.is_valid(raise_exception=True)
         except ValueError as e:
-            return Response('%s'%e,status=401)
+            return Response(data={'image_code_error':'%s'%e} if '图片' in ("%s"%e) else {'sms_code_error':'%s'%e},status=401,content_type='application/json')
         # 2. 发送短信验证码
         num = random.randint(0,999999)
         # 2.1 存储短信验证码数据
@@ -47,12 +52,17 @@ class SmsCode(GenericAPIView):
         conn = get_redis_connection('verify_codes')
         pl = conn.pipeline()
         pl.multi()
-        pl.setex('is_sms_%s'%mobile,constants.SMS_ISSEND_REDIS_EXPIRES,1)
+        pl.setex('is_sms_%s'%mobile,constants.SEND_SMS_CODE_INTERVAL,1)
         pl.setex('sms_%s'%mobile,constants.SMS_CODE_REDIS_EXPIRES,num)
         pl.execute()
+        print(num)
         # 2.2 调用接口发送数据
         # ccp = CCP()
-        # ccp.send_template_sms(mobile,"%06d"%num,1)
+        # time = str(constants.SMS_CODE_REDIS_EXPIRES / 60)
+        # ccp.send_template_sms(mobile, ["%06d"%num,time], constants.SMS_TEMP_ID)
+        # print(num)
+        send_sms_code.delay(mobile,num)
         return HttpResponse('ok',status=200)
+
 
 

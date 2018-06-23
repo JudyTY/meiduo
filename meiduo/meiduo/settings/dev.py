@@ -40,11 +40,20 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # 添加跨域应用
+    "corsheaders",
     # 注册DRF框架
-    'rest_framework'
+    'rest_framework',
+    # 注册user应用
+    'users.apps.UsersConfig',
+    # 注册验证应用
+    'verifications.apps.VerificationsConfig',
+
 ]
 
 MIDDLEWARE = [
+    # 添加跨域请求的中间件,1st
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -98,14 +107,22 @@ DATABASES = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://10.211.55.5:6379/0",
+        "LOCATION": "redis://127.0.0.1:6379/0",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
     },
     "session": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://10.211.55.5:6379/1",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    },
+    # 设置验证码储存在redis
+    "verify_codes": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/2",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
@@ -199,3 +216,20 @@ REST_FRAMEWORK = {
     # 异常处理
     'EXCEPTION_HANDLER': 'meiduo.utils.exceptions.exception_handler',
 }
+
+
+# 配置的用户模型类需要声明
+AUTH_USER_MODEL = 'users.User'
+
+# 添加跨域请求的白名单CORS
+CORS_ORIGIN_WHITELIST = (
+    '127.0.0.1:8080',
+    'localhost:8080',
+    'www.meiduo.site:8080'
+)
+# 添加跨域请求的请求头
+CORS_ALLOW_HEADERS = (
+    'XMLHttpRequest',
+    'content-type',
+)
+CORS_ALLOW_CREDENTIALS = True  # 允许携带cookie

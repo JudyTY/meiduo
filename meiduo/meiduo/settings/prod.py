@@ -40,15 +40,20 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # 添加跨域应用
+    "corsheaders",
     # 注册DRF框架
     'rest_framework',
     # 注册user应用
     'users.apps.UsersConfig',
     # 注册验证应用
     'verifications.apps.VerificationsConfig',
+
 ]
 
 MIDDLEWARE = [
+    # 添加跨域请求的中间件,1st
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -215,3 +220,14 @@ REST_FRAMEWORK = {
 
 # 配置的用户模型类需要声明
 AUTH_USER_MODEL = 'users.User'
+
+# 添加跨域请求的白名单CORS
+CORS_ORIGIN_WHITELIST = (
+    '127.0.0.1:8080',
+    'localhost:8080',
+    'www.meiduo.site:8080'
+)
+CORS_ALLOW_HEADERS = (
+    'XMLHttpRequest',
+)
+CORS_ALLOW_CREDENTIALS = True  # 允许携带cookie
