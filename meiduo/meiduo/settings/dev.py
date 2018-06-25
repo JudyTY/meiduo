@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/1.11/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.11/ref/settings/
 """
-
+import datetime
 import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -29,7 +29,7 @@ SECRET_KEY = 'tok@1@rbmjj(x_-7l5dr9#g^&*dio37c05-@=^caw#2+-et343'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['www.meiduo.com']
 
 # Application definition
 
@@ -215,8 +215,25 @@ LOGGING = {
 REST_FRAMEWORK = {
     # 异常处理
     'EXCEPTION_HANDLER': 'meiduo.utils.exceptions.exception_handler',
+    # 设置使用jwt认证
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ),
 }
 
+# JWT
+JWT_AUTH = {
+    # 设置jwt的过期时间
+    'JWT_EXPIRATION_DELTA': datetime.timedelta(days=1),
+    # 配置指定函数处理响应返回的数据
+    'JWT_RESPONSE_PAYLOAD_HANDLER': 'users.utils.jwt_response_payload_handler',
+}
+# 设置认证使用的类
+AUTHENTICATION_BACKENDS = [
+    'users.utils.UsernameMobileAuthBackend',
+]
 
 # 配置的用户模型类需要声明
 AUTH_USER_MODEL = 'users.User'
@@ -225,7 +242,7 @@ AUTH_USER_MODEL = 'users.User'
 CORS_ORIGIN_WHITELIST = (
     '127.0.0.1:8080',
     'localhost:8080',
-    'www.meiduo.site:8080'
+    'www.meiduo.site:8080',
 )
 # 添加跨域请求的请求头
 CORS_ALLOW_HEADERS = (

@@ -1,5 +1,7 @@
 import re
 from rest_framework import serializers
+from rest_framework_jwt.settings import api_settings
+
 from .models import User
 from django_redis import get_redis_connection
 
@@ -12,11 +14,15 @@ class CreateUserSerializer(serializers.ModelSerializer):
     password2 = serializers.CharField(min_length=8, max_length=20,write_only=True)
     sms_code = serializers.CharField(min_length=6, max_length=6,write_only=True)
     allow = serializers.BooleanField(default=False,write_only=True)
+    # 新增jwt的token字段,用于返回给浏览器
+    token = serializers.CharField(read_only=True,required=False)
 
     # 用户名的唯一性校验---防止恶意请求
     def validate_username(self, value):
         if User.objects.filter(mobile=value).count() > 0:
             raise serializers.ValidationError('用户名已经被注册')
+        if re.match(r'^\d.+',value):
+            raise serializers.ValidationError('用户名不能以数字开头')
         return value
 
     # 手机号的唯一性校验---防止恶意请求;手机号的格式校验
@@ -45,11 +51,10 @@ class CreateUserSerializer(serializers.ModelSerializer):
         sms_code = data.get('sms_code', '1')
         mobile = data.get('mobile')
         conn = get_redis_connection('verify_codes')
-        try:
-            if sms_code != conn.get('sms_%s' % mobile).decode():
-                raise serializers.ValidationError('短信验证码不正确')
-        except:
-            raise serializers.ValidationError('短信验证码过期')
+        if not conn.get('sms_%s' % mobile):
+            raise serializers.ValidationError('短信验证码过期或手机号输入错误')
+        if sms_code != conn.get('sms_%s' % mobile).decode():
+            raise serializers.ValidationError('短信验证码不正确')
         return data
 
     def create(self, validated_data):
@@ -65,12 +70,25 @@ class CreateUserSerializer(serializers.ModelSerializer):
         # 使用AbstractUser提供的加密方式
         user.set_password(validated_data['password'])
         user.save()
+
+        # 注册完成后,返回jwt的token给浏览器
+
+        # 得到生成playload载荷方法
+        jwt_playload = api_settings.JWT_PAYLOAD_HANDLER
+        # 得到生成token方法
+        jwt_encode = api_settings.JWT_ENCODE_HANDLER
+        # palyload中储存user对象的属性
+        playload = jwt_playload(user)
+        # 生成token,将token添加到user的属性中
+        token = jwt_encode(playload)
+        user.token = token
+        # 此时返回的user一并返回了token
         return user
 
     class Meta:
         model = User
         # 需要字段
-        fields = ('id','username', 'mobile', 'password', 'password2', 'sms_code', 'allow')
+        fields = ('id','username', 'mobile', 'password', 'password2', 'sms_code', 'allow','token')
         # 其它说明
         extra_kwargs = {
             'id': {'read_only': True},
@@ -92,3 +110,4 @@ class CreateUserSerializer(serializers.ModelSerializer):
                 }
             }
         }
+

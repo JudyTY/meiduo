@@ -46,7 +46,7 @@ class SmsCode(GenericAPIView):
         except ValueError as e:
             return Response(data={'image_code_error':'%s'%e} if '图片' in ("%s"%e) else {'sms_code_error':'%s'%e},status=401,content_type='application/json')
         # 2. 发送短信验证码
-        num = random.randint(0,999999)
+        num = '%06d'%random.randint(0,999999)
         # 2.1 存储短信验证码数据
         # 创建管道减少与redis数据库交互
         conn = get_redis_connection('verify_codes')
