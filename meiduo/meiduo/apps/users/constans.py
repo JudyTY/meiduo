@@ -1,0 +1,2 @@
+# dangerous的token有效期
+DANGEROURS_TOKEN_EXPIRES=600

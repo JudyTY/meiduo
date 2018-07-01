@@ -12,11 +12,12 @@ var vm = new Vue({
         remember: '',
         username_error: '请填写用户名或手机号',
         password_error: '请输入密码',
-        token: ''
+        token: '',
     },
     methods: {
         // 获取url路径参数
         get_query_string: function (name) {
+            // i -- 忽略大小写
             var reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)', 'i');
             var r = window.location.search.substr(1).match(reg);
             if (r != null) {
@@ -49,14 +50,18 @@ var vm = new Vue({
                     'password': vm.password,
                 })
                     .then(response => {
-                        localStorage.clear();
-                        sessionStorage.clear();
                         if (vm.remember_info) {
+                            // 记住登录
+                            sessionStorage.clear();
                             localStorage.token = response.data.token;
-                        }
+                            localStorage.user_id = response.data.user_id;
+                            localStorage.username = response.data.username;                        }
                         else {
+                            // 未记住登录
+                            localStorage.clear();
                             sessionStorage.token = response.data.token;
-                        }
+                            sessionStorage.user_id = response.data.user_id;
+                            sessionStorage.username = response.data.username;                        }
                         // 跳转页面
                         var return_url = this.get_query_string('next');
                         if (!return_url) {
@@ -66,9 +71,22 @@ var vm = new Vue({
 
                     })
                     .catch(error => {
-                        console.log(error.data)
+                        vm.password_error = '用户名或密码输入错误';
+                        vm.error_pwd = true;
                     })
             }
+        },
+        get_qq_url: function () {
+            axios.get(host + '/oauth/qq/authorization/', {
+                'state': vm.get_query_string(),
+            })
+                .then(response => {
+                    location.href = response.data.url
+                })
+                .catch(error => {
+                    console.log(error.response.data)
+                })
+
         }
     }
 });

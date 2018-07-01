@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     'users.apps.UsersConfig',
     # 注册验证应用
     'verifications.apps.VerificationsConfig',
+    # 注册第三方登录应用
+    'oauth.apps.OauthConfig',
 
 ]
 
@@ -168,7 +170,6 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-
 # 日志
 LOGGING = {
     'version': 1,
@@ -210,7 +211,6 @@ LOGGING = {
     }
 }
 
-
 # 为DRF设置添加了数据库错误处理的异常捕获器
 REST_FRAMEWORK = {
     # 异常处理
@@ -248,5 +248,27 @@ CORS_ORIGIN_WHITELIST = (
 CORS_ALLOW_HEADERS = (
     'XMLHttpRequest',
     'content-type',
+    'Authorization'
 )
 CORS_ALLOW_CREDENTIALS = True  # 允许携带cookie
+
+# 配置第三方qq登录
+# QQ互联注册的app_id
+QQ_APP_ID = '101486400'
+# QQ互联注册的app_key
+QQ_APP_KEY = 'c26856e06800e66e548af586685796cb'
+# QQ互联注册的QQ登录完成后的回调地址
+QQ_REDIRECT_URL = 'http://www.meiduo.site:8080/oauth_callback.html'
+
+# 设置发送邮件的配置
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# 设置163邮箱服务器
+EMAIL_HOST = 'smtp.163.com'
+# 163邮箱服务器的端口
+EMAIL_PORT = 25
+# 发送邮件的邮箱
+EMAIL_HOST_USER = 'judyty321@163.com'
+# 在邮箱中设置的客户端授权码
+EMAIL_HOST_PASSWORD = 'meiduo123'
+# 收件人看到的发件人 <>内容必须与EMAIL_HOST_USER保持一致
+EMAIL_FROM = 'meiduo<judyty321@163.com>'

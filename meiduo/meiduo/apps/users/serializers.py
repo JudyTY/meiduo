@@ -1,9 +1,12 @@
 import re
 from rest_framework import serializers
 from rest_framework_jwt.settings import api_settings
+from django.core.mail import send_mail
 
+from django.conf import settings
 from .models import User
 from django_redis import get_redis_connection
+from celery_tasks.email.tasks import celery_send_email
 
 
 class CreateUserSerializer(serializers.ModelSerializer):
@@ -11,17 +14,17 @@ class CreateUserSerializer(serializers.ModelSerializer):
     注册序列化器
     """
     # 添加字段二次密码,短信验证码,同意协议
-    password2 = serializers.CharField(min_length=8, max_length=20,write_only=True)
-    sms_code = serializers.CharField(min_length=6, max_length=6,write_only=True)
-    allow = serializers.BooleanField(default=False,write_only=True)
+    password2 = serializers.CharField(min_length=8, max_length=20, write_only=True)
+    sms_code = serializers.CharField(min_length=6, max_length=6, write_only=True)
+    allow = serializers.BooleanField(default=False, write_only=True)
     # 新增jwt的token字段,用于返回给浏览器
-    token = serializers.CharField(read_only=True,required=False)
+    token = serializers.CharField(read_only=True, required=False)
 
     # 用户名的唯一性校验---防止恶意请求
     def validate_username(self, value):
         if User.objects.filter(mobile=value).count() > 0:
             raise serializers.ValidationError('用户名已经被注册')
-        if re.match(r'^\d.+',value):
+        if re.match(r'^\d.+', value):
             raise serializers.ValidationError('用户名不能以数字开头')
         return value
 
@@ -88,7 +91,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         # 需要字段
-        fields = ('id','username', 'mobile', 'password', 'password2', 'sms_code', 'allow','token')
+        fields = ('id', 'username', 'mobile', 'password', 'password2', 'sms_code', 'allow', 'token')
         # 其它说明
         extra_kwargs = {
             'id': {'read_only': True},
@@ -111,3 +114,83 @@ class CreateUserSerializer(serializers.ModelSerializer):
             }
         }
 
+
+class ResetPasswordSerializer(serializers.ModelSerializer):
+    password2 = serializers.CharField(write_only=True)
+    token = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ('id', 'password', 'password2', 'token')
+        extra_kwargs = {
+            'password': {
+                'write_only': True,
+                'min_length': 8,
+                'max_length': 20,
+                'error_messages': {
+                    'min_length': '仅允许8-20个字符的密码',
+                    'max_length': '仅允许8-20个字符的密码',
+                }
+            }
+        }
+
+    def validate(self, attrs):
+        password = attrs.get('password')
+        password2 = attrs.get('password2')
+        token = attrs.get('token')
+        id = self.context['view'].kwargs['pk']
+        allow = User.decode_pwd_token(token=token, id=id)
+        if not allow:
+            return serializers.ValidationError('无效token')
+
+        if password2 != password:
+            return serializers.ValidationError('两次输入密码不一致')
+        return attrs
+
+    def update(self, instance, validated_data):
+        instance.set_password(validated_data['password'])
+        instance.save()
+        return instance
+
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    # 返回用户个人中心信息序列化器
+    class Meta:
+        model = User
+        # 设置返回的字段
+        fields = ('id', 'username', 'mobile', 'email', 'email_active')
+
+
+class EmailSerializer(serializers.ModelSerializer):
+    """保存用户的邮箱信息"""
+
+    class Meta:
+        model = User
+        # 指定字段用于返回
+        fields = ('id', 'email')
+        # email为必填项
+        extra_kwargs = {'email': {
+            'required': True,
+        }}
+
+    def validate_email(self, value):
+        try:
+            User.objects.get(email=value)
+            raise serializers.ValidationError('此邮箱已经被注册过')
+        except:
+            return value
+
+    def update(self, instance, validated_data):
+        # 保存用户邮箱
+        instance.email = validated_data['email']
+        instance.save()
+        # 激活邮件的发送
+        email = validated_data['email']
+        # token中需记录用户id与用户邮箱,将message的生成放到模型类的方法中
+        # token = ''
+        # url = 'www.baidu.com'
+        # header = '美多邮箱激活'
+        message = instance.generate_email_message()
+        # 发送邮件是耗时操作,放入celery中
+        celery_send_email(email=email, message=message)
+        return instance

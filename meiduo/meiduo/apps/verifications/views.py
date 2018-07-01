@@ -11,6 +11,7 @@ from django_redis import get_redis_connection
 from meiduo.apps.verifications.serializers import SmsCodeSerializer
 from . import constants,serializers
 from celery_tasks.sms.tasks import send_sms_code
+from users.models import User
 
 
 # Create your views here.
@@ -63,6 +64,33 @@ class SmsCode(GenericAPIView):
         # print(num)
         send_sms_code.delay(mobile,num)
         return HttpResponse('ok',status=200)
+
+
+class SmsCodeTokenView(APIView):
+    """
+    用于忘记密码的第二步验证token和2.1发送短信
+    """
+    def get(self,request):
+        token = request.query_params.get('token')
+        mobile = User.decode_sms_token(token)
+        user = User.objects.get(mobile=mobile)
+        num = '%06d'%random.randint(0,999999)
+        conn = get_redis_connection('verify_codes')
+        if not user:
+            return Response({'mobile_eroor':'手机号还没有注册过'},status=400)
+        if conn.get('is_sms_%s'%mobile):
+            return Response({'sms_code_error':'请不要过于频繁点击发送验证码'},status=400)
+        pl = conn.pipeline()
+        pl.multi()
+        pl.setex('is_sms_%s'%mobile,constants.SEND_SMS_CODE_INTERVAL,1)
+        pl.setex('sms_%s'%mobile,constants.SMS_CODE_REDIS_EXPIRES,num)
+        pl.execute()
+        print(num)
+        send_sms_code.delay(mobile,num)
+        return Response({'message:ok!'},status=200)
+
+
+
 
 
 
