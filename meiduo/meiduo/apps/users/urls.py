@@ -22,6 +22,10 @@ urlpatterns = [
     url(r'emails/$', views.EmailView.as_view()),
     # 激活邮箱
     url(r'emails/verification/$', views.VerifyEmailView.as_view()),
+    # 默认邮箱设置
+    url(r'(?P<id>\d+)/userdefaultaddress/$', views.UserDefaultAddress.as_view()),
+    # 修改密码
+    url(r'(?P<id>\d+)/passwords/$', views.UserPasswoed.as_view()),
     # 注册路由
     url(r'$', views.UserRigister.as_view()),
 ]

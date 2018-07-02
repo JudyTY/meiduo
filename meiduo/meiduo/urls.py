@@ -21,4 +21,8 @@ urlpatterns = [
     url(r'^users/', include('meiduo.apps.verifications.urls')),
     url(r'^users/', include('meiduo.apps.users.urls')),
     url(r'^oauth/', include('meiduo.apps.oauth.urls')),
+    # 地区路由
+    url(r'^', include('meiduo.apps.areas.urls')),
+    # 地址路由
+    url(r'^', include('meiduo.apps.addresses.urls')),
 ]

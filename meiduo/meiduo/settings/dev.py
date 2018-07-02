@@ -50,7 +50,10 @@ INSTALLED_APPS = [
     'verifications.apps.VerificationsConfig',
     # 注册第三方登录应用
     'oauth.apps.OauthConfig',
-
+    # 注册地区应用
+    'areas.apps.AreasConfig',
+    # 注册地址应用
+    'addresses.apps.AddressesConfig',
 ]
 
 MIDDLEWARE = [
@@ -221,6 +224,14 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
     ),
+}
+
+# 配置DRF的缓存配置
+REST_FRAMEWORK_EXTENSIONS = {
+    # 缓存时间-->1天
+    'DEFAULT_CACHE_RESPONSE_TIMEOUT': 60 * 60 * 24,
+    # 缓存存储
+    'DEFAULT_USE_CACHE': 'default',
 }
 
 # JWT

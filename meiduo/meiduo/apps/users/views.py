@@ -13,6 +13,7 @@ from verifications.serializers import ImageCodeSerializer, SmsCodeTokenSerialize
 from users.models import User
 from .serializers import *
 from .utils import get_user_acount
+from addresses.models import Addresses
 
 
 # 验证用户名的唯一性
@@ -154,3 +155,44 @@ class VerifyEmailView(APIView):
         user.email_active = True
         user.save()
         return Response({"message": 'ok!'})
+
+
+# 设定默认收货地址
+class UserDefaultAddress(APIView):
+    def put(self, request, id):
+        address_id = request.data.get('address_id')
+        try:
+            user = User.objects.get(id=id)
+            address = Addresses.objects.get(id=address_id)
+        except:
+            return Response(status=401)
+        try:
+            user.addresses.get(id=address_id)
+        except:
+            return Response(status=401)
+        user.default_address = address
+        user.save()
+        return Response(status=201)
+
+
+# 更改密码
+class UserPasswoed(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, id):
+        user = request.user
+        if User.objects.get(id=id) != user:
+            return Response(status=401)
+        old_password = request.data.get('old_password')
+        password = request.data.get('new_password')
+        password2 = request.data.get('new_password2')
+        if not user.check_password(old_password):
+            return Response({'old_error':'当前密码输入错误'},status=401)
+        if old_password == password:
+            return Response({'new_error':'新密码不能与当前密码一致'},status=401)
+        if password2 != password:
+            return Response({'new_error':'两次输入密码不一致'},status=401)
+        user.set_password(password)
+        user.save()
+        return Response(status=201)
+

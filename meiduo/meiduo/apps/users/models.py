@@ -12,6 +12,10 @@ class User(AbstractUser):
     """
     用户模型类
     """
+    # 新增默认地址外键字段
+    default_address = models.ForeignKey('addresses.Addresses',
+                                        related_name='users', null=True, blank=True, on_delete=models.SET_NULL,
+                                        verbose_name='默认地址')
     mobile = models.CharField(max_length=11, unique=True, verbose_name='手机号')
     # 新增邮箱激活状态
     email_active = models.BooleanField(default=False, verbose_name='邮箱激活状态')

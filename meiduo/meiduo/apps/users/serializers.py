@@ -174,6 +174,8 @@ class EmailSerializer(serializers.ModelSerializer):
         }}
 
     def validate_email(self, value):
+        if not re.match(r'^[a-zA-Z0-9_.-]+@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z0-9]{2,6}$', value):
+            raise serializers.ValidationError('邮箱格式不正确')
         try:
             User.objects.get(email=value)
             raise serializers.ValidationError('此邮箱已经被注册过')
